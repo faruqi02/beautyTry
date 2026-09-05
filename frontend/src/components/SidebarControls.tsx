@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Camera, Heart, Info, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Camera, Heart, Info, SlidersHorizontal, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -8,6 +8,8 @@ interface SidebarControlsProps {
   onSelectShade: (shade: string | null) => void;
   intensity: number;
   onIntensityChange: (intensity: number) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 // Mock Data
@@ -25,36 +27,52 @@ export function SidebarControls({
   onSelectShade,
   intensity,
   onIntensityChange,
+  isCollapsed = false,
+  onToggleCollapse,
 }: SidebarControlsProps) {
   const [activeTab, setActiveTab] = useState<'shades' | 'details'>('shades');
   const [selectedSkinTone, setSelectedSkinTone] = useState('Tan');
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Top Navigation / Tabs */}
-      <div className="flex border-b border-primary-200">
+      <div className="flex border-b border-primary-200 relative shrink-0 h-[60px]">
         <button
           className={twMerge(
-            "flex-1 py-4 text-sm font-medium tracking-wide flex justify-center items-center gap-2 transition-colors",
+            "flex-1 text-sm font-medium tracking-wide flex justify-center items-center gap-2 transition-colors",
             activeTab === 'shades' ? "text-primary-800 border-b-2 border-primary-800" : "text-gray-400 hover:text-primary-600"
           )}
-          onClick={() => setActiveTab('shades')}
+          onClick={() => {
+            setActiveTab('shades');
+            if (isCollapsed && onToggleCollapse) onToggleCollapse();
+          }}
         >
           <Sparkles size={16} /> All Shades
         </button>
         <button
           className={twMerge(
-            "flex-1 py-4 text-sm font-medium tracking-wide flex justify-center items-center gap-2 transition-colors",
+            "flex-1 text-sm font-medium tracking-wide flex justify-center items-center gap-2 transition-colors",
             activeTab === 'details' ? "text-primary-800 border-b-2 border-primary-800" : "text-gray-400 hover:text-primary-600"
           )}
-          onClick={() => setActiveTab('details')}
+          onClick={() => {
+            setActiveTab('details');
+            if (isCollapsed && onToggleCollapse) onToggleCollapse();
+          }}
         >
           <Info size={16} /> Product Info
         </button>
+        
+        {/* Collapse Toggle Button */}
+        <button 
+          onClick={onToggleCollapse}
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-600 rounded-full hover:bg-gray-100 transition-colors"
+        >
+          {isCollapsed ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
       </div>
 
-      {activeTab === 'shades' && (
-        <div className="flex-1 flex flex-col p-6 gap-8">
+      {!isCollapsed && activeTab === 'shades' && (
+        <div className="flex-1 flex flex-col p-6 gap-8 overflow-y-auto">
           
           {/* Skin Tone Selector */}
           <div className="space-y-3">
@@ -92,9 +110,9 @@ export function SidebarControls({
                   <div 
                     className={clsx(
                       "flex items-center gap-4 cursor-pointer p-2 rounded-xl transition-all",
-                      selectedShade === best.id ? "bg-white shadow-md ring-1 ring-primary-300" : "hover:bg-white/60"
+                      selectedShade === best.hex ? "bg-white shadow-md ring-1 ring-primary-300" : "hover:bg-white/60"
                     )}
-                    onClick={() => onSelectShade(best.id)}
+                    onClick={() => onSelectShade(best.hex)}
                   >
                     <div 
                       className="w-12 h-12 rounded-full shadow-inner border border-black/10 flex-shrink-0"
@@ -115,17 +133,17 @@ export function SidebarControls({
             <h3 className="text-xs uppercase tracking-widest text-primary-600 font-semibold">
               Other Recommendations
             </h3>
-            <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {shades.filter(s => !s.recommended).map((shade) => (
                 <div 
                   key={shade.id}
                   className={twMerge(
                     "flex items-center gap-4 p-3 rounded-xl cursor-pointer border transition-all",
-                    selectedShade === shade.id 
+                    selectedShade === shade.hex 
                       ? "border-primary-500 bg-primary-50 shadow-sm" 
                       : "border-transparent hover:border-primary-200 hover:bg-gray-50"
                   )}
-                  onClick={() => onSelectShade(shade.id)}
+                  onClick={() => onSelectShade(shade.hex)}
                 >
                   <div 
                     className="w-10 h-10 rounded-full shadow-inner border border-black/10 flex-shrink-0"
