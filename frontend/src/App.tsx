@@ -41,7 +41,7 @@ function App() {
         <div className="bg-black/50 p-10 rounded-3xl border border-gray-700 max-w-md">
           <h2 className="text-white text-2xl font-bold mb-4 tracking-widest uppercase">Device Not Supported</h2>
           <p className="text-gray-400">
-            This website is only for iPad Pro (Portrait). 
+            This website is only for iPad 11th Generation OR iPad Pro (Portrait). 
             Please rotate your device or use a supported screen size.
           </p>
         </div>
