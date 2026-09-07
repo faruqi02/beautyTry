@@ -4,9 +4,12 @@ import { SidebarControls } from './components/SidebarControls';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { Profile } from './components/Profile';
+import { AdminDashboard } from './components/AdminDashboard';
+import { AdminProducts } from './components/AdminProducts';
+import { AdminUsers } from './components/AdminUsers';
 import { UserCircle2 } from 'lucide-react';
 
-type ViewState = 'login' | 'register' | 'app' | 'profile';
+type ViewState = 'login' | 'register' | 'app' | 'profile' | 'admin_dashboard' | 'admin_products' | 'admin_users';
 
 function App() {
   const [selectedShade, setSelectedShade] = useState<string | null>(null);
@@ -35,20 +38,6 @@ function App() {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  if (!isValidScreen) {
-    return (
-      <div className="flex items-center justify-center h-screen w-full bg-gray-900 p-8 text-center font-sans">
-        <div className="bg-black/50 p-10 rounded-3xl border border-gray-700 max-w-md">
-          <h2 className="text-white text-2xl font-bold mb-4 tracking-widest uppercase">Device Not Supported</h2>
-          <p className="text-gray-400">
-            This website is only for iPad 11th Generation OR iPad Pro (Portrait). 
-            Please rotate your device or use a supported screen size.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Render Login
   if (currentView === 'login') {
     return <Login onNavigate={setCurrentView} />;
@@ -64,7 +53,39 @@ function App() {
     return <Profile onNavigate={setCurrentView} />;
   }
 
+  // Render Admin Routes
+  if (currentView === 'admin_dashboard') {
+    return <AdminDashboard onNavigate={setCurrentView} />;
+  }
+  if (currentView === 'admin_products') {
+    return <AdminProducts onNavigate={setCurrentView} />;
+  }
+  if (currentView === 'admin_users') {
+    return <AdminUsers onNavigate={setCurrentView} />;
+  }
+
   // Render Main App (Try-On)
+  // Only restrict the Try-On feature to the iPad screen size!
+  if (!isValidScreen) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-gray-900 p-8 text-center font-sans">
+        <div className="bg-black/50 p-10 rounded-3xl border border-gray-700 max-w-md">
+          <h2 className="text-white text-2xl font-bold mb-4 tracking-widest uppercase">Device Not Supported</h2>
+          <p className="text-gray-400">
+            The Try-On feature is only for iPad 11th Generation OR iPad Pro (Portrait). 
+            Please rotate your device or use a supported screen size.
+          </p>
+          <button 
+            onClick={() => setCurrentView('login')}
+            className="mt-6 px-6 py-2 bg-primary-800 text-white rounded-xl font-medium hover:bg-primary-900 transition-colors"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-screen w-full bg-background overflow-hidden font-sans">
       {/* Main Camera View Area */}

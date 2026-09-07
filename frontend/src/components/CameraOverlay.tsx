@@ -41,6 +41,7 @@ export function CameraOverlay({ selectedShade, intensity }: CameraOverlayProps) 
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
   const animationRef = useRef<number>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Initialize Camera
   useEffect(() => {
@@ -53,6 +54,7 @@ export function CameraOverlay({ selectedShade, intensity }: CameraOverlayProps) 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
         });
+        streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           setHasPermission(true);
@@ -65,9 +67,9 @@ export function CameraOverlay({ selectedShade, intensity }: CameraOverlayProps) 
     setupCamera();
 
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);

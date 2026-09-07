@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, Smartphone } from 'lucide-react';
 
 interface RegisterProps {
   onNavigate: (view: 'login' | 'app') => void;
@@ -8,11 +8,17 @@ interface RegisterProps {
 export function Register({ onNavigate }: RegisterProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && email && password) {
+    if (password !== confirmPassword) {
+      // Prevent submission if passwords don't match
+      return;
+    }
+    if (name && email && phone && password) {
       // In a real app, you would create the account here
       onNavigate('app');
     }
@@ -70,6 +76,23 @@ export function Register({ onNavigate }: RegisterProps) {
           </div>
 
           <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Mobile Number</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                <Smartphone size={18} />
+              </div>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="block w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none"
+                placeholder="+60 12-345 6789"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
@@ -86,9 +109,43 @@ export function Register({ onNavigate }: RegisterProps) {
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Re-type Password</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                <Lock size={18} />
+              </div>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`block w-full pl-12 pr-4 py-3 bg-gray-50 border rounded-xl text-sm focus:ring-2 transition-all outline-none ${
+                  confirmPassword.length > 0 
+                    ? password === confirmPassword 
+                      ? "border-green-500 focus:ring-green-500" 
+                      : "border-rose-500 focus:ring-rose-500"
+                    : "border-gray-200 focus:ring-primary-500 focus:border-primary-500"
+                }`}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            {/* Real-time validation message */}
+            {confirmPassword.length > 0 && (
+              <p className={`mt-2 text-xs font-medium ${password === confirmPassword ? "text-green-600" : "text-rose-500"}`}>
+                {password === confirmPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
+              </p>
+            )}
+          </div>
+
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-primary-800 text-white py-3.5 rounded-xl font-bold uppercase tracking-wide text-sm hover:bg-primary-900 transition-colors shadow-md mt-4"
+            disabled={password !== confirmPassword && confirmPassword.length > 0}
+            className={`w-full flex items-center justify-center gap-2 text-white py-3.5 rounded-xl font-bold uppercase tracking-wide text-sm transition-all shadow-md mt-4 ${
+              password !== confirmPassword && confirmPassword.length > 0 
+                ? "bg-gray-400 cursor-not-allowed" 
+                : "bg-primary-800 hover:bg-primary-900"
+            }`}
           >
             Register Account
           </button>
@@ -97,4 +154,3 @@ export function Register({ onNavigate }: RegisterProps) {
     </div>
   );
 }
-

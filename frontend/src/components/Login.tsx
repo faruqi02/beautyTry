@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, ArrowRight, UserCircle2 } from 'lucide-react';
 
 interface LoginProps {
-  onNavigate: (view: 'register' | 'app') => void;
+  onNavigate: (view: 'register' | 'app' | 'admin_dashboard') => void;
 }
 
 export function Login({ onNavigate }: LoginProps) {
@@ -13,7 +13,11 @@ export function Login({ onNavigate }: LoginProps) {
     e.preventDefault();
     // Placeholder for real auth
     if (email && password) {
-      onNavigate('app');
+      if (email.toLowerCase().includes('admin')) {
+        onNavigate('admin_dashboard');
+      } else {
+        onNavigate('app');
+      }
     }
   };
 
