@@ -227,10 +227,10 @@ export function AdminUsers({ onNavigate, user }: AdminUsersProps) {
                         </span>
                       </td>
                       <td className="p-4 text-sm text-gray-600">
-                        {user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                        {user.created_at ? new Date(user.created_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                       </td>
                       <td className="p-4 text-sm text-gray-600">
-                        {user.last_login ? new Date(user.last_login).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toUpperCase() : '-'}
+                        {user.last_login ? new Date(user.last_login as string).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toUpperCase() : '-'}
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">
                         <button 

@@ -8,6 +8,7 @@ export interface User {
   saved_product?: string;
   password?: string;
   last_login?: string;
+  created_at?: string;
 }
 
 export interface Product {

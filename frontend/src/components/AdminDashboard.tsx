@@ -12,6 +12,8 @@ export function AdminDashboard({ onNavigate, user }: AdminDashboardProps) {
   const [totalUsers, setTotalUsers] = useState<number | '-'>('-');
   const [totalProducts, setTotalProducts] = useState<number | '-'>('-');
   const [activeSessions, setActiveSessions] = useState<number | '-'>('-');
+  const [products, setProducts] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -23,6 +25,7 @@ export function AdminDashboard({ onNavigate, user }: AdminDashboardProps) {
 
         if (usersRes.ok) {
           const usersData = await usersRes.json();
+          setUsersList(usersData);
           setTotalUsers(usersData.length);
           
           // Calculate active sessions (login within last 24h)
@@ -39,6 +42,7 @@ export function AdminDashboard({ onNavigate, user }: AdminDashboardProps) {
 
         if (productsRes.ok) {
           const productsData = await productsRes.json();
+          setProducts(productsData);
           setTotalProducts(productsData.length);
         }
       } catch (error) {
@@ -48,6 +52,21 @@ export function AdminDashboard({ onNavigate, user }: AdminDashboardProps) {
     
     fetchMetrics();
   }, []);
+
+  // Prepare Chart Data
+  const skintoneCounts = products.reduce((acc: any, p: any) => {
+    const tone = p.skintone || 'Uncategorized';
+    acc[tone] = (acc[tone] || 0) + 1;
+    return acc;
+  }, {});
+  const sortedSkintones = Object.entries(skintoneCounts).sort((a: any, b: any) => b[1] - a[1]);
+
+  const roleCounts = usersList.reduce((acc: any, u: any) => {
+    const r = u.role?.toUpperCase() || 'CUSTOMER';
+    acc[r] = (acc[r] || 0) + 1;
+    return acc;
+  }, {});
+  const sortedRoles = Object.entries(roleCounts).sort((a: any, b: any) => b[1] - a[1]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -81,7 +100,7 @@ export function AdminDashboard({ onNavigate, user }: AdminDashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-10">
+      <div className="flex-1 p-10 overflow-auto">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Management Dashboard</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -99,8 +118,57 @@ export function AdminDashboard({ onNavigate, user }: AdminDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-96 flex items-center justify-center">
-          <p className="text-gray-400">Dashboard charts and activity logs will appear here.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Chart 1: Products by Skintone */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="text-gray-900 font-bold mb-6 text-lg">Products by Skintone</h3>
+            {products.length === 0 ? (
+               <div className="h-48 flex items-center justify-center text-gray-400">
+                 <Loader2 size={24} className="animate-spin mr-2" /> Loading chart...
+               </div>
+            ) : (
+               <div className="space-y-5">
+                 {sortedSkintones.map(([tone, count]: any) => (
+                   <div key={tone}>
+                     <div className="flex justify-between text-sm mb-1.5">
+                       <span className="font-medium text-gray-700">{tone}</span>
+                       <span className="text-gray-500 font-mono">{count}</span>
+                     </div>
+                     <div className="w-full bg-gray-50 rounded-full h-2.5">
+                       <div className="bg-primary-500 h-2.5 rounded-full" style={{ width: `${(count / products.length) * 100}%` }}></div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+            )}
+          </div>
+
+          {/* Chart 2: User Roles Distribution */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="text-gray-900 font-bold mb-6 text-lg">User Roles</h3>
+            {usersList.length === 0 ? (
+               <div className="h-48 flex items-center justify-center text-gray-400">
+                 <Loader2 size={24} className="animate-spin mr-2" /> Loading chart...
+               </div>
+            ) : (
+               <div className="space-y-5">
+                 {sortedRoles.map(([role, count]: any) => {
+                   const colorClass = role === 'ADMIN' ? 'bg-purple-500' : role === 'STAFF' ? 'bg-blue-500' : 'bg-green-500';
+                   return (
+                     <div key={role}>
+                       <div className="flex justify-between text-sm mb-1.5">
+                         <span className="font-medium text-gray-700 capitalize">{role.toLowerCase()}</span>
+                         <span className="text-gray-500 font-mono">{count}</span>
+                       </div>
+                       <div className="w-full bg-gray-50 rounded-full h-2.5">
+                         <div className={`${colorClass} h-2.5 rounded-full`} style={{ width: `${(count / usersList.length) * 100}%` }}></div>
+                       </div>
+                     </div>
+                   )
+                 })}
+               </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
