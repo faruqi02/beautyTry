@@ -147,7 +147,7 @@ export function AdminUsers({ onNavigate, user }: AdminUsersProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-10 flex flex-col min-h-0">
+      <div className="flex-1 p-10 flex flex-col min-h-0 min-w-0">
         <div className="flex justify-between items-center mb-8 shrink-0">
           <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
           <button 
@@ -182,15 +182,14 @@ export function AdminUsers({ onNavigate, user }: AdminUsersProps) {
             </select>
           </div>
           
-          <div className="overflow-auto flex-1">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+          <div className="overflow-x-auto overflow-y-auto flex-1 block w-full">
+            <table className="w-full text-left border-collapse min-w-max">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500">
                   <th className="p-4 font-semibold whitespace-nowrap">User Details</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Phone Number</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Role</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Status</th>
-                  <th className="p-4 font-semibold whitespace-nowrap">Saved Product</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Created Date</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Last Login</th>
                   <th className="p-4 font-semibold whitespace-nowrap text-right">Actions</th>
@@ -198,9 +197,9 @@ export function AdminUsers({ onNavigate, user }: AdminUsersProps) {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-gray-500 font-medium">Loading users...</td></tr>
+                  <tr><td colSpan={7} className="p-8 text-center text-gray-500 font-medium">Loading users...</td></tr>
                 ) : filteredUsers.length === 0 ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-gray-500 font-medium">No users found.</td></tr>
+                  <tr><td colSpan={7} className="p-8 text-center text-gray-500 font-medium">No users found.</td></tr>
                 ) : (
                   filteredUsers.map((user, idx) => (
                     <tr key={user.id || idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
@@ -226,9 +225,6 @@ export function AdminUsers({ onNavigate, user }: AdminUsersProps) {
                         }`}>
                           {user.status || 'Active'}
                         </span>
-                      </td>
-                      <td className="p-4 text-sm text-gray-700 font-mono">
-                        {user.saved_product || '-'}
                       </td>
                       <td className="p-4 text-sm text-gray-600">
                         {user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}

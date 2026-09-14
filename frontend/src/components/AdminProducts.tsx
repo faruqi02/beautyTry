@@ -149,7 +149,7 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-10 flex flex-col min-h-0">
+      <div className="flex-1 p-10 flex flex-col min-h-0 min-w-0">
         <div className="flex justify-between items-center mb-8 shrink-0">
           <h2 className="text-2xl font-bold text-gray-900">Product Management</h2>
           <button 
@@ -186,8 +186,8 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
             </div>
           </div>
           
-          <div className="overflow-auto flex-1">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+          <div className="overflow-x-auto overflow-y-auto flex-1 block w-full">
+            <table className="w-full text-left border-collapse min-w-max">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500">
                   <th className="p-4 font-semibold whitespace-nowrap">Product Name</th>

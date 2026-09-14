@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, LogOut, Settings, Heart, UserCircle2, Loader2, Edit2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, LogOut, Settings, Heart, UserCircle2, Loader2, Edit2, Trash2 } from 'lucide-react';
 import type { User, Product } from '../types';
 
 interface ProfileProps {
@@ -9,11 +9,118 @@ interface ProfileProps {
   onUpdateUser?: (user: User) => void;
 }
 
+function SwipeableFavoriteItem({ favName, favProduct, onRemove, onApply }: { favName: string, favProduct: Product | undefined, onRemove: () => void, onApply: () => void }) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startX = useRef(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    startX.current = e.touches[0].clientX - offsetX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const x = e.touches[0].clientX - startX.current;
+    // Limit dragging between -80 (left) and 0 (right)
+    const boundedX = Math.max(-80, Math.min(0, x));
+    setOffsetX(boundedX);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    if (offsetX < -40) {
+      setOffsetX(-80); // snap open
+    } else {
+      setOffsetX(0); // snap closed
+    }
+  };
+
+  // Support mouse dragging for desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    startX.current = e.clientX - offsetX;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const x = e.clientX - startX.current;
+    const boundedX = Math.max(-80, Math.min(0, x));
+    setOffsetX(boundedX);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (offsetX < -40) {
+      setOffsetX(-80); // snap open
+    } else {
+      setOffsetX(0); // snap closed
+    }
+  };
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl shadow-sm border border-rose-100 bg-rose-50">
+      {/* Background Action (Delete) */}
+      <div className="absolute inset-y-0 right-0 w-20 flex items-center justify-center">
+        <button 
+          onClick={onRemove}
+          className="text-rose-600 hover:text-rose-800 font-bold text-[10px] uppercase tracking-wider flex flex-col items-center gap-1 w-full h-full justify-center"
+        >
+          <Trash2 size={24} /> Delete
+        </button>
+      </div>
+
+      {/* Foreground Item */}
+      <div 
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        className="bg-white p-6 flex flex-row items-center gap-4 relative z-10 cursor-grab active:cursor-grabbing border border-transparent rounded-2xl h-full select-none"
+        style={{ 
+          transform: `translateX(${offsetX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+        }}
+      >
+        <div className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl pointer-events-none">
+          Favorite
+        </div>
+        <div 
+          className="w-16 h-16 rounded-full shadow-inner border border-black/10 shrink-0 pointer-events-none"
+          style={{ backgroundColor: favProduct?.hex_colour || '#eeeeee' }}
+        />
+        <div className="flex-1 pointer-events-none">
+          <p className="font-bold text-gray-900 text-lg">{favName}</p>
+          {favProduct ? (
+            <p className="text-sm text-gray-500 mt-1">{favProduct.code_colour}</p>
+          ) : (
+            <p className="text-sm text-gray-500 mt-1">Product details unavailable.</p>
+          )}
+        </div>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onApply();
+          }}
+          className="mt-2 text-sm text-rose-600 font-bold hover:text-rose-700 w-max shrink-0 px-4 cursor-pointer"
+        >
+          Apply in Try-On &rarr;
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfileProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -73,8 +180,8 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-8">
+    <div className="min-h-screen bg-gray-50 w-full overflow-y-auto flex flex-col">
+      <div className="max-w-2xl mx-auto p-8 w-full flex-1 flex flex-col">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-10">
@@ -203,39 +310,43 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
             <div className="flex flex-col gap-4">
               {savedProductNames.map(favName => {
                 const favProduct = products.find(p => p.product_name === favName);
+                
+                const handleRemoveFavorite = async () => {
+                  const newSavedList = savedProductNames.filter(name => name !== favName);
+                  const newSavedProductStr = newSavedList.join(', ');
+                  
+                  const updatedUser = { ...displayUser, saved_product: newSavedProductStr };
+                  if (onUpdateUser) onUpdateUser(updatedUser);
+                  
+                  try {
+                    const res = await fetch(`/api/users/${displayUser.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ saved_product: newSavedProductStr })
+                    });
+                    if (!res.ok) throw new Error('Failed to remove favorite');
+                  } catch (err) {
+                    console.error(err);
+                    alert('Failed to remove favorite.');
+                    if (onUpdateUser) onUpdateUser(displayUser); // Revert
+                  }
+                };
+
+                const handleApply = () => {
+                  if (favProduct?.hex_colour) {
+                    window.localStorage.setItem('pending_apply_shade', favProduct.hex_colour);
+                  }
+                  onNavigate('app');
+                };
+
                 return (
-                  <div key={favName} className="bg-white rounded-2xl p-6 border border-rose-100 flex flex-row items-center gap-4 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl">
-                      Favorite
-                    </div>
-                    <div 
-                      className="w-16 h-16 rounded-full shadow-inner border border-black/10 shrink-0"
-                      style={{ backgroundColor: favProduct?.hex_colour || '#eeeeee' }}
-                    />
-                    <div className="flex-1">
-                      <p className="font-bold text-gray-900 text-lg">{favName}</p>
-                      {favProduct ? (
-                        <p className="text-sm text-gray-500 mt-1">{favProduct.code_colour}</p>
-                      ) : (
-                        <p className="text-sm text-gray-500 mt-1">Product details unavailable.</p>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => {
-                        // We use a small hack to pass the hex_colour through local storage 
-                        // so App.tsx can pick it up, or we can just navigate and let the user select.
-                        // Better: just navigate for now, since App.tsx doesn't take a hex parameter in onNavigate.
-                        // Wait, user explicitly asked: "make sure it apply the selected one"
-                        if (favProduct?.hex_colour) {
-                          window.localStorage.setItem('pending_apply_shade', favProduct.hex_colour);
-                        }
-                        onNavigate('app');
-                      }} 
-                      className="mt-2 text-sm text-rose-600 font-bold hover:text-rose-700 w-max shrink-0 px-4"
-                    >
-                      Apply in Try-On &rarr;
-                    </button>
-                  </div>
+                  <SwipeableFavoriteItem 
+                    key={favName} 
+                    favName={favName} 
+                    favProduct={favProduct} 
+                    onRemove={handleRemoveFavorite} 
+                    onApply={handleApply} 
+                  />
                 );
               })}
             </div>
@@ -249,17 +360,47 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
         </div>
 
         {/* Logout */}
+        {/* Logout */}
         <button
-          onClick={() => {
-            onLogout();
-            onNavigate('login');
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-white border border-rose-200 text-rose-600 py-4 rounded-2xl font-bold uppercase tracking-wide text-sm hover:bg-rose-50 transition-colors"
+          onClick={() => setShowSignOutConfirm(true)}
+          className="mt-auto w-full flex items-center justify-center gap-2 bg-rose-600 text-white py-4 rounded-2xl font-bold uppercase tracking-wide text-sm hover:bg-rose-700 transition-colors shadow-sm"
         >
           <LogOut size={18} /> Sign Out
         </button>
 
       </div>
+
+      {/* Custom Sign Out Modal */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6">
+              <LogOut size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Sign Out</h3>
+            <p className="text-gray-500 mb-8">Are you sure you want to sign out of your account?</p>
+            <div className="flex w-full gap-4">
+              <button 
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 py-3.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setShowSignOutConfirm(false);
+                  onLogout();
+                  onNavigate('login');
+                }}
+                className="flex-1 py-3.5 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
