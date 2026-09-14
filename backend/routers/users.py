@@ -15,6 +15,7 @@ class UserCreate(BaseModel):
     role: str = 'CUSTOMER'
     status: str = 'Active'
     saved_product: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -25,6 +26,7 @@ class UserUpdate(BaseModel):
     status: Optional[str] = None
     last_login: Optional[str] = None
     saved_product: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr

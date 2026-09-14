@@ -12,6 +12,7 @@ interface SidebarControlsProps {
   onToggleCollapse?: () => void;
   currentUser?: User | null;
   setCurrentUser?: (user: User | null) => void;
+  onTakeSnapshot?: () => void;
 }
 
 export function SidebarControls({
@@ -23,6 +24,7 @@ export function SidebarControls({
   onToggleCollapse,
   currentUser,
   setCurrentUser,
+  onTakeSnapshot,
 }: SidebarControlsProps) {
   const [activeTab, setActiveTab] = useState<'shades' | 'details'>('shades');
   const [selectedSkinTone, setSelectedSkinTone] = useState<string>('');
@@ -318,7 +320,7 @@ export function SidebarControls({
 
       {/* Footer Actions */}
       <div className="mt-auto p-6 bg-gray-50 border-t border-primary-200 flex justify-around shrink-0 relative">
-        <button className="flex flex-col items-center gap-1 text-gray-500 hover:text-primary-600 transition-colors">
+        <button onClick={onTakeSnapshot} className="flex flex-col items-center gap-1 text-gray-500 hover:text-primary-600 transition-colors">
           <Camera size={20} />
           <span className="text-[10px] uppercase font-bold">Snapshot</span>
         </button>

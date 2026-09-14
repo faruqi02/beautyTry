@@ -7,7 +7,7 @@ import { Profile } from './components/Profile';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AdminProducts } from './components/AdminProducts';
 import { AdminUsers } from './components/AdminUsers';
-import { UserCircle2 } from 'lucide-react';
+import { UserCircle2, X } from 'lucide-react';
 import type { User } from './types';
 
 type ViewState = 'login' | 'register' | 'app' | 'profile' | 'admin_dashboard' | 'admin_products' | 'admin_users';
@@ -19,6 +19,8 @@ function App() {
   const [isValidScreen, setIsValidScreen] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [snapshotTrigger, setSnapshotTrigger] = useState(0);
+  const [snapshots, setSnapshots] = useState<string[]>([]);
 
   React.useEffect(() => {
     if (currentView === 'app') {
@@ -105,8 +107,28 @@ function App() {
         <CameraOverlay 
           selectedShade={selectedShade} 
           intensity={intensity} 
+          snapshotTrigger={snapshotTrigger}
+          currentUser={currentUser}
+          onSnapshotCaptured={(url) => setSnapshots(prev => [url, ...prev])}
         />
         
+        {/* Floating Snapshots Gallery */}
+        {snapshots.length > 0 && (
+          <div className="absolute left-6 top-24 bottom-40 w-28 flex flex-col gap-4 overflow-y-auto z-10 p-2 pointer-events-auto" style={{ scrollbarWidth: 'none' }}>
+             {snapshots.map((url, i) => (
+               <div key={i} className="relative rounded-xl overflow-hidden border-2 border-white shadow-[0_4px_12px_rgba(0,0,0,0.2)] shrink-0 group bg-black">
+                 <img src={url} alt={`Snapshot ${i}`} className="w-full h-auto object-cover" />
+                 <button 
+                   onClick={() => setSnapshots(prev => prev.filter((_, idx) => idx !== i))}
+                   className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-rose-500"
+                 >
+                    <X size={12} />
+                 </button>
+               </div>
+             ))}
+          </div>
+        )}
+
         {/* Top Header overlay */}
         <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 bg-gradient-to-b from-black/50 to-transparent pointer-events-none">
           <h1 className="text-white text-2xl font-light tracking-widest uppercase shadow-black drop-shadow-md">BeautyTry</h1>
@@ -134,6 +156,7 @@ function App() {
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
+          onTakeSnapshot={() => setSnapshotTrigger(prev => prev + 1)}
         />
       </aside>
     </div>

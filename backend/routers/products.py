@@ -11,6 +11,9 @@ class ProductCreate(BaseModel):
     code_colour: str
     hex_colour: str
     stock_qty: int
+    product_info: Optional[str] = None
+    intensity_colour: Optional[int] = None
+    image_urls: Optional[str] = None
 
 class ProductUpdate(BaseModel):
     product_name: Optional[str] = None
@@ -18,6 +21,9 @@ class ProductUpdate(BaseModel):
     code_colour: Optional[str] = None
     hex_colour: Optional[str] = None
     stock_qty: Optional[int] = None
+    product_info: Optional[str] = None
+    intensity_colour: Optional[int] = None
+    image_urls: Optional[str] = None
 
 @router.get("")
 async def get_products():

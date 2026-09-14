@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, LogOut, Settings, Heart, UserCircle2, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Settings, Heart, UserCircle2, Loader2, Edit2, Trash2, Camera } from 'lucide-react';
 import type { User, Product } from '../types';
 
 interface ProfileProps {
@@ -278,8 +278,62 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
             </form>
           ) : (
             <div className="flex items-center gap-6 w-full">
-              <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center text-primary-800 text-3xl font-light uppercase shrink-0">
-                {displayUser.full_name.charAt(0)}
+              <div className="relative group shrink-0">
+                <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center text-primary-800 text-3xl font-light uppercase overflow-hidden border-4 border-white shadow-sm">
+                  {displayUser.profile_image_url ? (
+                    <img src={displayUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    (displayUser.full_name || 'U').charAt(0)
+                  )}
+                </div>
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                  {isSaving ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    disabled={isSaving}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsSaving(true);
+                      try {
+                        const { uploadImageToGas, callGasApi } = await import('../utils/gasApi');
+                        const uploadRes = await uploadImageToGas('users', user.id, file);
+                        
+                        if (uploadRes.error) {
+                          alert(`Upload Error: ${uploadRes.error}`);
+                          return;
+                        }
+
+                        if (uploadRes.url) {
+                          const dbRes = await callGasApi("POST", {}, {
+                            action: "update",
+                            sheet: "user_data",
+                            id: user.id,
+                            data: {
+                              profile_image_url: uploadRes.url
+                            }
+                          });
+                          
+                          if (dbRes.error) {
+                            alert(`Database Update Error: ${dbRes.error}`);
+                            return;
+                          }
+
+                          if (onUpdateUser) {
+                            onUpdateUser({ ...user, profile_image_url: uploadRes.url });
+                          }
+                        }
+                      } catch (err: any) {
+                        console.error('Upload failed', err);
+                        alert(`Network/Fetch Error: ${err.message || String(err)}`);
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }} 
+                  />
+                </label>
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-gray-900 truncate">{displayUser.full_name}</h2>

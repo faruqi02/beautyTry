@@ -12,6 +12,7 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -42,6 +43,10 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
     setIsSaving(true);
     const formData = new FormData(e.currentTarget);
     const productData = Object.fromEntries(formData.entries());
+    
+    if (uploadedImageUrl) {
+      productData.image_urls = uploadedImageUrl;
+    }
 
     // Ensure stock_qty and intensity_colour are integers
     if (productData.stock_qty) {
@@ -153,7 +158,7 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
         <div className="flex justify-between items-center mb-8 shrink-0">
           <h2 className="text-2xl font-bold text-gray-900">Product Management</h2>
           <button 
-            onClick={() => setModalMode('add')}
+            onClick={() => { setSelectedProduct(null); setUploadedImageUrl(''); setModalMode('add'); }}
             className="flex items-center gap-2 bg-primary-800 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-primary-900 transition-colors"
           >
             <Plus size={18} /> Add Product
@@ -190,6 +195,7 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
             <table className="w-full text-left border-collapse min-w-max">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500">
+                  <th className="p-4 font-semibold whitespace-nowrap">Image</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Product Name</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Skintone</th>
                   <th className="p-4 font-semibold whitespace-nowrap">Code Colour</th>
@@ -202,12 +208,19 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-gray-500 font-medium"><Loader2 size={24} className="animate-spin mx-auto" /></td></tr>
+                  <tr><td colSpan={9} className="p-8 text-center text-gray-500 font-medium"><Loader2 size={24} className="animate-spin mx-auto" /></td></tr>
                 ) : filteredProducts.length === 0 ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-gray-500 font-medium">No products found.</td></tr>
+                  <tr><td colSpan={9} className="p-8 text-center text-gray-500 font-medium">No products found.</td></tr>
                 ) : (
                   filteredProducts.map((product, idx) => (
                     <tr key={product.id || idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td className="p-4">
+                        {product.image_urls ? (
+                          <img src={product.image_urls} alt="prod" className="w-10 h-10 rounded object-cover border border-gray-200" />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">No img</div>
+                        )}
+                      </td>
                       <td className="p-4">
                         <p className="font-medium text-gray-900">{product.product_name}</p>
                       </td>
@@ -239,7 +252,7 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">
                         <button 
-                          onClick={() => { setSelectedProduct(product); setModalMode('edit'); }}
+                          onClick={() => { setSelectedProduct(product); setUploadedImageUrl(product.image_urls || ''); setModalMode('edit'); }}
                           className="p-2 rounded-lg border border-primary-200 text-primary-600 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all mr-2" title="Edit"
                         >
                           <Pencil size={18} />
@@ -276,6 +289,53 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
             </div>
             
             <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Product Image</label>
+                <div className="flex items-center gap-4">
+                  {uploadedImageUrl ? (
+                    <div className="relative w-16 h-16 rounded border border-gray-200 overflow-hidden shrink-0">
+                      <img src={uploadedImageUrl} alt="Product" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => setUploadedImageUrl('')}
+                        className="absolute top-0 right-0 bg-rose-500 text-white w-5 h-5 flex items-center justify-center text-xs opacity-80 hover:opacity-100"
+                      >×</button>
+                    </div>
+                  ) : null}
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 transition-colors"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsSaving(true);
+                        try {
+                          const { uploadImageToGas } = await import('../utils/gasApi');
+                          const entityId = selectedProduct?.id || 'new_' + Date.now();
+                          const uploadRes = await uploadImageToGas('products', entityId, file);
+                          
+                          if (uploadRes.error) {
+                            alert(`Upload Error: ${uploadRes.error}`);
+                            return;
+                          }
+
+                          if (uploadRes.url) {
+                            setUploadedImageUrl(uploadRes.url);
+                          }
+                        } catch (err: any) {
+                          console.error('Upload failed', err);
+                          alert(`Network/Fetch Error: ${err.message || String(err)}`);
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Product Name</label>
                 <input 

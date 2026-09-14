@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, AlertCircle } from 'lucide-react';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
+import type { User } from '../types';
+
 interface CameraOverlayProps {
   selectedShade: string | null;
   intensity: number;
+  snapshotTrigger?: number;
+  currentUser?: User | null;
+  onSnapshotCaptured?: (url: string) => void;
 }
 
 // Helper to convert hex to rgba
@@ -34,7 +39,7 @@ const LOWER_LIP = [
   308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78   // Inner top (reversed to close)
 ];
 
-export function CameraOverlay({ selectedShade, intensity }: CameraOverlayProps) {
+export function CameraOverlay({ selectedShade, intensity, snapshotTrigger, currentUser, onSnapshotCaptured }: CameraOverlayProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -101,6 +106,75 @@ export function CameraOverlay({ selectedShade, intensity }: CameraOverlayProps) 
     }
     initMediaPipe();
   }, []);
+
+  // Handle Snapshot
+  useEffect(() => {
+    if (snapshotTrigger && snapshotTrigger > 0 && canvasRef.current && videoRef.current) {
+      if (!currentUser) {
+        alert('Please login to save snapshots.');
+        return;
+      }
+      
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      
+      // We need to capture both the video frame AND the canvas drawing (virtual makeup)
+      const captureCanvas = document.createElement('canvas');
+      captureCanvas.width = canvas.width || video.videoWidth;
+      captureCanvas.height = canvas.height || video.videoHeight;
+      const captureCtx = captureCanvas.getContext('2d');
+      if (!captureCtx) return;
+
+      // Draw video frame first
+      captureCtx.save();
+      captureCtx.scale(-1, 1); // Flip horizontally because video is mirrored
+      captureCtx.drawImage(video, -captureCanvas.width, 0, captureCanvas.width, captureCanvas.height);
+      captureCtx.restore();
+
+      // Draw makeup overlay on top
+      captureCtx.drawImage(canvas, 0, 0, captureCanvas.width, captureCanvas.height);
+
+      captureCanvas.toBlob(async (blob) => {
+        if (!blob) return;
+        
+        // Immediately show it in the UI for comparison
+        const objectUrl = URL.createObjectURL(blob);
+        if (onSnapshotCaptured) {
+          onSnapshotCaptured(objectUrl);
+        }
+
+        const file = new File([blob], `snapshot_${currentUser.id}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        try {
+          const { uploadImageToGas, callGasApi } = await import('../utils/gasApi');
+          const uploadRes = await uploadImageToGas('snapshots', currentUser.id || 'new', file);
+          
+          if (uploadRes.error) {
+            alert(`Google Drive Upload Error: ${uploadRes.error}`);
+            return;
+          }
+
+          if (uploadRes.url) {
+            const dbRes = await callGasApi("POST", {}, {
+              action: "create",
+              sheet: "user_snapshots",
+              data: {
+                user_id: currentUser.id,
+                snapshot_url: uploadRes.url,
+                file_id: uploadRes.file_id
+              }
+            });
+            if (dbRes.error) {
+               alert(`Database Insert Error: ${dbRes.error}`);
+            }
+          }
+        } catch (err: any) {
+          console.error("Snapshot save failed", err);
+          alert(`Network/Fetch Error: ${err.message || String(err)}`);
+        }
+      }, 'image/jpeg', 0.9);
+    }
+  }, [snapshotTrigger]);
+
 
   // Render Loop
   useEffect(() => {
