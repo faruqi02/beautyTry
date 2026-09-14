@@ -148,23 +148,23 @@ export function CameraOverlay({ selectedShade, intensity, snapshotTrigger, curre
           const { uploadImageToGas, callGasApi } = await import('../utils/gasApi');
           const uploadRes = await uploadImageToGas('snapshots', currentUser.id || 'new', file);
           
-          if (uploadRes.error) {
-            alert(`Google Drive Upload Error: ${uploadRes.error}`);
+          if (uploadRes.status !== 200 || uploadRes.data?.error) {
+            alert(`Google Drive Upload Error: ${uploadRes.data?.error || 'Unknown error'}`);
             return;
           }
 
-          if (uploadRes.url) {
+          if (uploadRes.data?.url) {
             const dbRes = await callGasApi("POST", {}, {
               action: "create",
               sheet: "user_snapshots",
               data: {
                 user_id: currentUser.id,
-                snapshot_url: uploadRes.url,
-                file_id: uploadRes.file_id
+                direct_url: uploadRes.data.url,
+                file_id: uploadRes.data.file_id
               }
             });
-            if (dbRes.error) {
-               alert(`Database Insert Error: ${dbRes.error}`);
+            if (dbRes.status !== 200 || dbRes.data?.error) {
+               alert(`Database Insert Error: ${dbRes.data?.error || 'Unknown error'}`);
             }
           }
         } catch (err: any) {

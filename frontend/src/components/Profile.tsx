@@ -301,28 +301,28 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
                         const { uploadImageToGas, callGasApi } = await import('../utils/gasApi');
                         const uploadRes = await uploadImageToGas('users', user.id, file);
                         
-                        if (uploadRes.error) {
-                          alert(`Upload Error: ${uploadRes.error}`);
+                        if (uploadRes.status !== 200 || uploadRes.data?.error) {
+                          alert(`Upload Error: ${uploadRes.data?.error || 'Unknown error'}`);
                           return;
                         }
 
-                        if (uploadRes.url) {
+                        if (uploadRes.data?.url) {
                           const dbRes = await callGasApi("POST", {}, {
                             action: "update",
                             sheet: "user_data",
                             id: user.id,
                             data: {
-                              profile_image_url: uploadRes.url
+                              profile_image_url: uploadRes.data.url
                             }
                           });
                           
-                          if (dbRes.error) {
-                            alert(`Database Update Error: ${dbRes.error}`);
+                          if (dbRes.status !== 200 || dbRes.data?.error) {
+                            alert(`Database Update Error: ${dbRes.data?.error || 'Unknown error'}`);
                             return;
                           }
 
                           if (onUpdateUser) {
-                            onUpdateUser({ ...user, profile_image_url: uploadRes.url });
+                            onUpdateUser({ ...user, profile_image_url: uploadRes.data.url });
                           }
                         }
                       } catch (err: any) {

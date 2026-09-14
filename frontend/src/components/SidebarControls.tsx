@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, Heart, Info, SlidersHorizontal, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Camera, Heart, Info, SlidersHorizontal, Sparkles, ChevronDown, ChevronUp, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import type { Product, User } from '../types';
 
@@ -14,6 +14,50 @@ interface SidebarControlsProps {
   setCurrentUser?: (user: User | null) => void;
   onTakeSnapshot?: () => void;
 }
+
+const ImageSlider = ({ images }: { images: string[] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [images.join(',')]);
+
+  if (!images || images.length === 0) return null;
+
+  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % images.length);
+  const prevSlide = () => setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+
+  return (
+    <div className="relative w-full h-48 bg-gray-50 rounded-xl overflow-hidden group mb-4 border border-gray-100 shadow-sm shrink-0">
+      <img 
+        src={images[currentIndex]} 
+        alt="Product view" 
+        className="w-full h-full object-cover transition-all duration-300"
+      />
+      
+      {images.length > 1 && (
+        <>
+          <button onClick={prevSlide} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+            <ChevronLeft size={18} />
+          </button>
+          <button onClick={nextSlide} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+            <ChevronRight size={18} />
+          </button>
+
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
+            {images.map((_, idx) => (
+              <button 
+                key={idx}
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-3' : 'bg-white/60 hover:bg-white'}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export function SidebarControls({
   selectedShade,
@@ -286,8 +330,11 @@ export function SidebarControls({
           {(() => {
             const currentSelectedProduct = products.find(p => p.hex_colour === selectedShade);
             if (currentSelectedProduct) {
+              const images = currentSelectedProduct.image_urls ? currentSelectedProduct.image_urls.split(',').map(s => s.trim()).filter(Boolean) : [];
               return (
                 <div className="bg-white rounded-2xl p-6 border border-primary-100 shadow-sm flex flex-col gap-4">
+                  {images.length > 0 && <ImageSlider images={images} />}
+                  
                   <div className="flex items-center gap-4">
                     <div 
                       className="w-16 h-16 rounded-full shadow-inner border border-black/10 flex-shrink-0"

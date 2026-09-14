@@ -1,4 +1,4 @@
-export const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwN76rUC8siFTm5vJ7OOgQgtgL9NVJSDzDAmaUZbnUbmAiOfVKtW8wRE26wMVevVCR3UQ/exec";
+export const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyUiQpHkDl7hzKBfR244q5k7jkqG2zcF9WaOLvdyn8wbn8FdHPERH78yt3uwL3Vn2Ud8Q/exec";
 
 /**
  * Unified fetch wrapper handling GAS redirects and CORS quirks.

@@ -39,7 +39,10 @@ async def create_product(product: ProductCreate):
 
 @router.put("/{id}")
 async def update_product(id: str, product: ProductUpdate):
-    return await post_sheet_action("product_data", action="update", item_id=id, data=product.model_dump(exclude_unset=True))
+    print("PUT /products", id, "PAYLOAD RECEIVED:", product.model_dump())
+    dumped = product.model_dump(exclude_unset=True)
+    print("DUMPED FOR GAS:", dumped)
+    return await post_sheet_action("product_data", action="update", item_id=id, data=dumped)
 
 @router.delete("/{id}")
 async def delete_product(id: str):

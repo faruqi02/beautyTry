@@ -62,6 +62,7 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
     }
 
     try {
+      console.log("Saving product data:", productData);
       if (modalMode === 'edit' && selectedProduct?.id) {
         await fetch(`/api/products/${selectedProduct.id}`, {
           method: 'PUT',
@@ -291,48 +292,68 @@ export function AdminProducts({ onNavigate, user }: AdminProductsProps) {
             <div className="p-6 space-y-5">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Product Image</label>
-                <div className="flex items-center gap-4">
-                  {uploadedImageUrl ? (
-                    <div className="relative w-16 h-16 rounded border border-gray-200 overflow-hidden shrink-0">
-                      <img src={uploadedImageUrl} alt="Product" className="w-full h-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setUploadedImageUrl('')}
-                        className="absolute top-0 right-0 bg-rose-500 text-white w-5 h-5 flex items-center justify-center text-xs opacity-80 hover:opacity-100"
-                      >×</button>
-                    </div>
-                  ) : null}
-                  <div className="flex-1">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 transition-colors"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setIsSaving(true);
-                        try {
-                          const { uploadImageToGas } = await import('../utils/gasApi');
-                          const entityId = selectedProduct?.id || 'new_' + Date.now();
-                          const uploadRes = await uploadImageToGas('products', entityId, file);
-                          
-                          if (uploadRes.error) {
-                            alert(`Upload Error: ${uploadRes.error}`);
-                            return;
-                          }
-
-                          if (uploadRes.url) {
-                            setUploadedImageUrl(uploadRes.url);
-                          }
-                        } catch (err: any) {
-                          console.error('Upload failed', err);
-                          alert(`Network/Fetch Error: ${err.message || String(err)}`);
-                        } finally {
-                          setIsSaving(false);
-                        }
-                      }}
-                    />
-                  </div>
+                <div className="flex flex-col gap-4">
+                  {(() => {
+                    const imageUrls = uploadedImageUrl ? uploadedImageUrl.split(',').map(s => s.trim()).filter(Boolean) : [];
+                    return (
+                      <>
+                        {imageUrls.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {imageUrls.map((url, idx) => (
+                              <div key={idx} className="relative w-16 h-16 rounded border border-gray-200 overflow-hidden shrink-0 shadow-sm">
+                                <img src={url} alt={`Product ${idx}`} className="w-full h-full object-cover" />
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    const newUrls = [...imageUrls];
+                                    newUrls.splice(idx, 1);
+                                    setUploadedImageUrl(newUrls.join(','));
+                                  }}
+                                  className="absolute top-0 right-0 bg-rose-500 text-white w-5 h-5 flex items-center justify-center text-xs opacity-80 hover:opacity-100 rounded-bl"
+                                >×</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            multiple
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 transition-colors"
+                            onChange={async (e) => {
+                              const files = Array.from(e.target.files || []);
+                              if (files.length === 0) return;
+                              setIsSaving(true);
+                              try {
+                                const { uploadImageToGas } = await import('../utils/gasApi');
+                                const entityId = selectedProduct?.id || 'new_' + Date.now();
+                                
+                                let currentUrls = [...imageUrls];
+                                
+                                for (const file of files) {
+                                  const uploadRes = await uploadImageToGas('products', entityId, file);
+                                  if (uploadRes.status !== 200 || uploadRes.data?.error) {
+                                    alert(`Upload Error for ${file.name}: ${uploadRes.data?.error || 'Unknown error'}`);
+                                    continue;
+                                  }
+                                  if (uploadRes.data?.url) {
+                                    currentUrls.push(uploadRes.data.url);
+                                  }
+                                }
+                                setUploadedImageUrl(currentUrls.join(','));
+                              } catch (err: any) {
+                                console.error('Upload failed', err);
+                                alert(`Network/Fetch Error: ${err.message || String(err)}`);
+                              } finally {
+                                setIsSaving(false);
+                              }
+                            }}
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
