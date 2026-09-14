@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect } from 'react';
 import { CameraOverlay } from './components/CameraOverlay';
 import { SidebarControls } from './components/SidebarControls';
 import { Login } from './components/Login';
@@ -8,6 +8,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { AdminProducts } from './components/AdminProducts';
 import { AdminUsers } from './components/AdminUsers';
 import { UserCircle2 } from 'lucide-react';
+import type { User } from './types';
 
 type ViewState = 'login' | 'register' | 'app' | 'profile' | 'admin_dashboard' | 'admin_products' | 'admin_users';
 
@@ -16,7 +17,18 @@ function App() {
   const [intensity, setIntensity] = useState<number>(0.8);
   const [currentView, setCurrentView] = useState<ViewState>('login');
   const [isValidScreen, setIsValidScreen] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  React.useEffect(() => {
+    if (currentView === 'app') {
+      const pendingShade = window.localStorage.getItem('pending_apply_shade');
+      if (pendingShade) {
+        setSelectedShade(pendingShade);
+        window.localStorage.removeItem('pending_apply_shade');
+      }
+    }
+  }, [currentView]);
 
   // iPad Pro dimensions check
   useLayoutEffect(() => {
@@ -40,28 +52,28 @@ function App() {
 
   // Render Login
   if (currentView === 'login') {
-    return <Login onNavigate={setCurrentView} />;
+    return <Login onNavigate={setCurrentView} onLogin={setCurrentUser} />;
   }
 
   // Render Register
   if (currentView === 'register') {
-    return <Register onNavigate={setCurrentView} />;
+    return <Register onNavigate={setCurrentView} onRegister={setCurrentUser} />;
   }
   
   // Render Profile
-  if (currentView === 'profile') {
-    return <Profile onNavigate={setCurrentView} />;
+  if (currentView === 'profile' && currentUser) {
+    return <Profile onNavigate={setCurrentView} user={currentUser} onLogout={() => setCurrentUser(null)} onUpdateUser={setCurrentUser} />;
   }
 
   // Render Admin Routes
   if (currentView === 'admin_dashboard') {
-    return <AdminDashboard onNavigate={setCurrentView} />;
+    return <AdminDashboard onNavigate={setCurrentView} user={currentUser} />;
   }
   if (currentView === 'admin_products') {
-    return <AdminProducts onNavigate={setCurrentView} />;
+    return <AdminProducts onNavigate={setCurrentView} user={currentUser} />;
   }
   if (currentView === 'admin_users') {
-    return <AdminUsers onNavigate={setCurrentView} />;
+    return <AdminUsers onNavigate={setCurrentView} user={currentUser} />;
   }
 
   // Render Main App (Try-On)
@@ -110,7 +122,7 @@ function App() {
       {/* Bottom Controls Area */}
       <aside 
         className={`absolute bottom-0 left-0 w-full bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col z-20 rounded-t-3xl transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'h-[60px]' : 'h-[500px]'
+          isCollapsed ? 'h-[144px]' : 'h-[500px]'
         }`}
       >
         <SidebarControls 
@@ -120,6 +132,8 @@ function App() {
           onIntensityChange={setIntensity}
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+          currentUser={currentUser}
+          setCurrentUser={setCurrentUser}
         />
       </aside>
     </div>

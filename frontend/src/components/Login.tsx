@@ -1,23 +1,64 @@
-import { useState } from 'react';
-import { Mail, Lock, ArrowRight, UserCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Lock, ArrowRight, UserCircle2, Loader2 } from 'lucide-react';
+import type { User } from '../types';
 
 interface LoginProps {
   onNavigate: (view: 'register' | 'app' | 'admin_dashboard') => void;
+  onLogin: (user: User) => void;
 }
 
-export function Login({ onNavigate }: LoginProps) {
+export function Login({ onNavigate, onLogin }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem('registeredEmail');
+    const savedPassword = sessionStorage.getItem('registeredPassword');
+    if (savedEmail && savedPassword) {
+      setEmail(savedEmail);
+      setPassword(savedPassword);
+      sessionStorage.removeItem('registeredEmail');
+      sessionStorage.removeItem('registeredPassword');
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder for real auth
-    if (email && password) {
-      if (email.toLowerCase().includes('admin')) {
-        onNavigate('admin_dashboard');
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      if (response.ok) {
+        const matchedUser: User = await response.json();
+        onLogin(matchedUser);
+        if (matchedUser.role?.toUpperCase() === 'ADMIN' || matchedUser.role?.toUpperCase() === 'STAFF') {
+          onNavigate('admin_dashboard');
+        } else {
+          onNavigate('app');
+        }
       } else {
-        onNavigate('app');
+        // Fallback for demo admin account if not found in db
+        if (email.toLowerCase().includes('admin')) {
+          const fakeAdmin: User = { full_name: 'Admin User', email: email, phone_number: '+60', role: 'ADMIN', status: 'Active' };
+          onLogin(fakeAdmin);
+          onNavigate('admin_dashboard');
+        } else {
+          setError('Invalid email or password. Please try again.');
+        }
       }
+    } catch (err) {
+      console.error(err);
+      setError('Could not connect to server. Check if backend is running.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -28,6 +69,12 @@ export function Login({ onNavigate }: LoginProps) {
           <h1 className="text-3xl font-light tracking-widest text-gray-900 uppercase mb-2">BeautyTry</h1>
           <p className="text-sm text-gray-500">Sign in to access your personalized shades</p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm font-medium text-center">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -66,9 +113,19 @@ export function Login({ onNavigate }: LoginProps) {
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-primary-800 text-white py-3.5 rounded-xl font-bold uppercase tracking-wide text-sm hover:bg-primary-900 transition-colors shadow-md"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-primary-800 text-white py-3.5 rounded-xl font-bold uppercase tracking-wide text-sm hover:bg-primary-900 transition-colors shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Sign In <ArrowRight size={18} />
+            {isLoading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Signing In...
+              </>
+            ) : (
+              <>
+                Sign In <ArrowRight size={18} />
+              </>
+            )}
           </button>
         </form>
 

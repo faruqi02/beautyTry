@@ -109,11 +109,12 @@ export function CameraOverlay({ selectedShade, intensity }: CameraOverlayProps) 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
     let lastVideoTime = -1;
 
     function renderLoop() {
+      if (!ctx) return;
+      
       if (video.readyState >= 2 && faceLandmarkerRef.current) {
         // Match canvas size to video size
         if (canvas.width !== video.videoWidth) {
