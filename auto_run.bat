@@ -16,10 +16,6 @@ IF NOT EXIST "venv\Scripts\activate.bat" (
     echo [INFO] Backend virtual environment found.
 )
 
-:: Start the Backend in a new terminal window
-echo Starting Backend Server...
-start "BeautyTry Backend" cmd /k "cd /d "%~dp0backend" && call venv\Scripts\activate && python main.py"
-
 :: --- FRONTEND SETUP ---
 echo.
 echo Checking Frontend Environment...
@@ -36,20 +32,20 @@ echo.
 echo Checking Cloudflare Tunnel...
 where cloudflared >nul 2>nul
 IF %ERRORLEVEL% NEQ 0 (
-    echo [INFO] Cloudflare Tunnel (cloudflared) is not installed.
+    echo [INFO] Cloudflare Tunnel is not installed.
     echo [INFO] Attempting to install Cloudflare Tunnel...
     winget install --id Cloudflare.cloudflared --accept-package-agreements --accept-source-agreements
 ) ELSE (
     echo [INFO] Cloudflare Tunnel is installed.
 )
 
-:: Start the Cloudflare Tunnel in a new terminal window
-echo Starting Cloudflare Tunnel...
-start "BeautyTry Public Tunnel" cmd /k "echo Waiting for Frontend to start... && timeout /t 5 >nul && cloudflared tunnel --url https://localhost:5173 --no-tls-verify"
-
-:: Start the Frontend in the current terminal window
+:: --- START ALL SERVICES IN ONE TERMINAL ---
 echo.
-echo Starting Frontend Server...
-call npm run dev -- --host
+echo =========================================================
+echo Starting Backend, Frontend, and Cloudflare in ONE view...
+echo =========================================================
+echo.
+cd /d "%~dp0"
+call npx --yes concurrently -n "BACKEND,FRONTEND,TUNNEL" -c "bgBlue.bold,bgMagenta.bold,bgGreen.bold" "cd backend && call venv\Scripts\activate && python main.py" "cd frontend && npm run dev -- --host" "cd backend && call venv\Scripts\activate && cd .. && python run_tunnel.py"
 
 pause

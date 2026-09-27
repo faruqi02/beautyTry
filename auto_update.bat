@@ -1,40 +1,37 @@
 @echo off
-title BeautyTry Auto-Updater
-cd /d "%~dp0"
+title BeautyTry Auto Updater
+echo ===================================================
+echo   Updating BeautyTry to the latest version...
+echo ===================================================
+echo.
 
-echo ==========================================
-echo   Pulling latest updates from GitHub...
-echo ==========================================
-
-:: 1. Save any local modifications safely to prevent merge conflicts
+echo [1/4] Stashing any local changes to prevent conflicts...
 git stash
 
-:: 2. Pull the latest code from the repository
+echo.
+echo [2/4] Pulling latest code from GitHub...
 git pull
 
-:: 3. Restore the local modifications (if there were any)
-git stash pop
-
 echo.
-echo ==========================================
-echo   Updating Backend Dependencies...
-echo ==========================================
+echo [3/4] Updating Backend Dependencies...
 cd backend
-call venv\Scripts\activate
-pip install -r requirements.txt
+IF EXIST "venv\Scripts\activate.bat" (
+    call venv\Scripts\activate.bat
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+) ELSE (
+    echo [INFO] Backend virtual environment not found. auto_run.bat will create it!
+)
 cd ..
 
 echo.
-echo ==========================================
-echo   Updating Frontend Dependencies...
-echo ==========================================
+echo [4/4] Updating Frontend Dependencies...
 cd frontend
 call npm install
 cd ..
 
 echo.
-echo ==========================================
-echo   Update Successfully Completed!
-echo ==========================================
-echo You can now start the application using auto_run.bat
+echo ===================================================
+echo   Update Complete! You can now run auto_run.bat
+echo ===================================================
 pause
