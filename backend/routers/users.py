@@ -123,3 +123,17 @@ async def update_user(id: str, user: UserUpdate):
 @router.delete("/{id}")
 async def delete_user(id: str):
     return await post_sheet_action("user_data", action="delete", item_id=id)
+
+@router.get("/{id}/snapshots")
+async def get_user_snapshots(id: str):
+    snapshots = await fetch_sheet_data("user_snapshots")
+    if not isinstance(snapshots, list):
+        snapshots = []
+    # Filter by user_id
+    user_snapshots = [s for s in snapshots if isinstance(s, dict) and str(s.get("user_id")) == str(id)]
+    # Sort newest first (assuming chronological order in sheet)
+    return list(reversed(user_snapshots))
+
+@router.delete("/snapshots/{snapshot_id}")
+async def delete_snapshot(snapshot_id: str):
+    return await post_sheet_action("user_snapshots", action="delete", item_id=snapshot_id)

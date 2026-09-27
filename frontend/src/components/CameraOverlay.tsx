@@ -125,14 +125,17 @@ export function CameraOverlay({ selectedShade, intensity, snapshotTrigger, curre
       const captureCtx = captureCanvas.getContext('2d');
       if (!captureCtx) return;
 
-      // Draw video frame first
+      // Flip horizontally so the snapshot exactly matches the mirrored preview the user sees
       captureCtx.save();
-      captureCtx.scale(-1, 1); // Flip horizontally because video is mirrored
+      captureCtx.scale(-1, 1);
+      
+      // Draw video frame
       captureCtx.drawImage(video, -captureCanvas.width, 0, captureCanvas.width, captureCanvas.height);
-      captureCtx.restore();
-
+      
       // Draw makeup overlay on top
-      captureCtx.drawImage(canvas, 0, 0, captureCanvas.width, captureCanvas.height);
+      captureCtx.drawImage(canvas, -captureCanvas.width, 0, captureCanvas.width, captureCanvas.height);
+      
+      captureCtx.restore();
 
       captureCanvas.toBlob(async (blob) => {
         if (!blob) return;

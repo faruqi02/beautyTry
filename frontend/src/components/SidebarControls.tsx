@@ -317,7 +317,7 @@ export function SidebarControls({
               step="0.05"
               value={intensity}
               onChange={(e) => onIntensityChange(parseFloat(e.target.value))}
-              className="w-full accent-primary-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:bg-primary-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 active:[&::-webkit-slider-thumb]:w-10 active:[&::-webkit-slider-thumb]:h-10 active:[&::-webkit-slider-thumb]:shadow-lg active:[&::-webkit-slider-thumb]:bg-primary-500 [&::-moz-range-thumb]:w-8 [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:bg-primary-600 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:transition-all [&::-moz-range-thumb]:duration-200 active:[&::-moz-range-thumb]:w-10 active:[&::-moz-range-thumb]:h-10 active:[&::-moz-range-thumb]:shadow-lg active:[&::-moz-range-thumb]:bg-primary-500"
             />
           </div>
 

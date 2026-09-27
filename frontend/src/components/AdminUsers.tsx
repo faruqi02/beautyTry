@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, Users, LogOut, Search, UserPlus, Pencil, Ban, X, Loader2, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Package, Users, LogOut, Search, UserPlus, Pencil, X, Loader2, Trash2 } from 'lucide-react';
 import type { User } from '../types';
 
 interface AdminUsersProps {

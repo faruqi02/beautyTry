@@ -7,7 +7,7 @@ interface RegisterProps {
   onRegister: (user: User) => void;
 }
 
-export function Register({ onNavigate, onRegister }: RegisterProps) {
+export function Register({ onNavigate }: RegisterProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');

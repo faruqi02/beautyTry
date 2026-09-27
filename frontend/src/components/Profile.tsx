@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, LogOut, Settings, Heart, UserCircle2, Loader2, Edit2, Trash2, Camera } from 'lucide-react';
+import { ArrowLeft, LogOut, Heart, UserCircle2, Loader2, Edit2, Trash2, Camera, Download, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { User, Product } from '../types';
 
 interface ProfileProps {
@@ -120,6 +120,8 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [newProfilePic, setNewProfilePic] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
@@ -137,6 +139,29 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
     };
     fetchProducts();
   }, []);
+
+  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [loadingSnapshots, setLoadingSnapshots] = useState(true);
+  const [previewSnap, setPreviewSnap] = useState<any | null>(null);
+  const [snapshotToDelete, setSnapshotToDelete] = useState<any | null>(null);
+  const [isDeletingSnapshot, setIsDeletingSnapshot] = useState(false);
+
+  useEffect(() => {
+    const fetchSnapshots = async () => {
+      if (!user) return;
+      try {
+        const res = await fetch(`/api/users/${user.id}/snapshots`);
+        if (res.ok) {
+          setSnapshots(await res.json());
+        }
+      } catch (err) {
+        console.error('Failed to fetch snapshots', err);
+      } finally {
+        setLoadingSnapshots(false);
+      }
+    };
+    fetchSnapshots();
+  }, [user]);
 
   if (!user) {
     return (
@@ -180,8 +205,8 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-y-auto flex flex-col">
-      <div className="max-w-2xl mx-auto p-8 w-full flex-1 flex flex-col">
+    <div className="min-h-screen bg-gray-50 w-full overflow-y-auto flex flex-col relative">
+      <div className="max-w-2xl mx-auto p-8 pb-32 w-full flex-1 flex flex-col">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-10">
@@ -226,15 +251,117 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
               }}
               className="flex flex-col gap-4 w-full"
             >
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
-                <button 
-                  type="button" 
-                  onClick={() => setIsEditing(false)}
-                  className="text-gray-400 hover:text-gray-600 font-medium text-sm"
-                >
-                  Cancel
-                </button>
+              <div className="flex flex-col items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900 w-full flex justify-between mb-4">
+                  <span>Edit Profile</span>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsEditing(false);
+                      setNewProfilePic(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 font-medium text-sm"
+                  >
+                    Cancel
+                  </button>
+                </h2>
+                
+                {/* Profile Picture Uploader */}
+                <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                  <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100 flex items-center justify-center relative">
+                    {(newProfilePic || displayUser.profile_image_url) ? (
+                      <img 
+                        src={newProfilePic || displayUser.profile_image_url} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle2 size={40} className="text-gray-400" />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="text-white" size={24} />
+                    </div>
+                  </div>
+                </div>
+                
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  disabled={isSaving}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    setIsSaving(true);
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const img = new Image();
+                      img.onload = async () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 400; // Shrink to 400x400 max
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > height) {
+                          if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                          }
+                        } else {
+                          if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                          }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx?.drawImage(img, 0, 0, width, height);
+                        
+                        canvas.toBlob(async (blob) => {
+                          if (!blob) {
+                            setIsSaving(false);
+                            return;
+                          }
+                          const compressedFile = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+                          
+                          try {
+                            const { uploadImageToGas } = await import('../utils/gasApi');
+                            const uploadRes = await uploadImageToGas('users', user?.id as string, compressedFile);
+                            
+                            if (uploadRes.status !== 200 || uploadRes.data?.error) {
+                              alert(`Upload Error: ${uploadRes.data?.error || 'Unknown error'}`);
+                              return;
+                            }
+                            
+                            if (uploadRes.data?.url) {
+                              setNewProfilePic(uploadRes.data.url);
+                              // Note: We don't save to database yet until they hit "Save Changes" on the form.
+                              // The hidden input handles submitting the new URL.
+                            }
+                          } catch (err: any) {
+                            console.error('Upload failed', err);
+                            alert(`Network/Fetch Error: ${err.message || String(err)}`);
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }, 'image/jpeg', 0.85);
+                      };
+                      img.src = event.target?.result as string;
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  {isSaving ? 'Uploading image...' : 'Tap to change profile photo'}
+                </p>
+                
+                {/* Hidden input to include the profile picture in formData */}
+                {newProfilePic && <input type="hidden" name="profile_image_url" value={newProfilePic} />}
               </div>
               
               <div>
@@ -299,7 +426,7 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
                       setIsSaving(true);
                       try {
                         const { uploadImageToGas, callGasApi } = await import('../utils/gasApi');
-                        const uploadRes = await uploadImageToGas('users', user.id, file);
+                        const uploadRes = await uploadImageToGas('users', user.id as string, file);
                         
                         if (uploadRes.status !== 200 || uploadRes.data?.error) {
                           alert(`Upload Error: ${uploadRes.data?.error || 'Unknown error'}`);
@@ -413,15 +540,48 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
           )}
         </div>
 
-        {/* Logout */}
-        {/* Logout */}
-        <button
-          onClick={() => setShowSignOutConfirm(true)}
-          className="mt-auto w-full flex items-center justify-center gap-2 bg-rose-600 text-white py-4 rounded-2xl font-bold uppercase tracking-wide text-sm hover:bg-rose-700 transition-colors shadow-sm"
-        >
-          <LogOut size={18} /> Sign Out
-        </button>
+        {/* Snapshot Gallery Section */}
+        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2 mt-4">
+          <Camera size={18} className="text-primary-500" /> My Snapshots Gallery
+        </h3>
+        <div className="mb-12">
+          {loadingSnapshots ? (
+            <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary-300" size={32}/></div>
+          ) : snapshots.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {snapshots.map(snap => {
+                // Google Drive blocks direct view URLs in img tags now. We use the thumbnail API as a bypass.
+                const imgUrl = snap.file_id 
+                  ? `https://drive.google.com/thumbnail?id=${snap.file_id}&sz=w1000` 
+                  : (snap.snapshot_url || '');
+                  
+                return (
+                  <div key={snap.id} onClick={() => setPreviewSnap(snap)} className="relative cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-white aspect-[3/4] hover:opacity-90 transition-opacity">
+                    <img src={imgUrl} alt="Snapshot" className="w-full h-full object-cover" />
+                  </div>
+              );
+            })}
+          </div>
+        ) : (
+            <div className="bg-white rounded-2xl p-8 border border-dashed border-gray-300 flex flex-col items-center justify-center text-center text-gray-500">
+              <Camera size={32} className="text-gray-300 mb-3" />
+              <p className="text-sm font-medium">No snapshots taken yet.</p>
+              <p className="text-xs mt-1">Go to the Try-On studio and capture some looks!</p>
+            </div>
+          )}
+        </div>
+      </div>
 
+      {/* Floating Logout Button */}
+      <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-gray-50 via-gray-50/90 to-transparent z-40 pointer-events-none">
+        <div className="max-w-2xl mx-auto pointer-events-auto">
+          <button
+            onClick={() => setShowSignOutConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 bg-rose-600 text-white py-4 rounded-2xl font-bold uppercase tracking-wide text-sm hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/30"
+          >
+            <LogOut size={18} /> Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Custom Sign Out Modal */}
@@ -449,6 +609,118 @@ export function Profile({ onNavigate, user, onLogout, onUpdateUser }: ProfilePro
                 className="flex-1 py-3.5 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm"
               >
                 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewSnap && (
+        <div className="fixed inset-0 bg-black z-[110] flex flex-col">
+          {/* Header */}
+          <div className="flex justify-between items-center p-4">
+            <button onClick={() => setPreviewSnap(null)} className="p-2 bg-gray-800 hover:bg-gray-700 transition-colors text-white rounded-full">
+               <X size={24} />
+            </button>
+            <button onClick={() => setSnapshotToDelete(previewSnap)} className="py-2 px-4 bg-rose-600 hover:bg-rose-700 transition-colors text-white rounded-full flex gap-2 items-center shadow-lg shadow-rose-600/30">
+               <Trash2 size={16} /> <span className="font-bold text-sm uppercase tracking-wide">Delete</span>
+            </button>
+          </div>
+          
+          {/* Image */}
+          {(() => {
+             const currentIdx = snapshots.findIndex(s => s.id === previewSnap.id);
+             return (
+               <div className="flex-1 relative flex items-center justify-center overflow-hidden p-4">
+                  {currentIdx > 0 && (
+                    <button 
+                       onClick={(e) => { e.stopPropagation(); setPreviewSnap(snapshots[currentIdx - 1]); }}
+                       className="absolute left-4 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full z-10 transition-colors backdrop-blur-sm shadow-xl"
+                    >
+                      <ChevronLeft size={32} />
+                    </button>
+                  )}
+                  
+                  <img src={previewSnap.file_id ? `https://drive.google.com/thumbnail?id=${previewSnap.file_id}&sz=w1000` : previewSnap.snapshot_url} className="max-w-full max-h-full object-contain rounded-2xl animate-in zoom-in duration-200" alt="Preview" />
+                  
+                  {currentIdx !== -1 && currentIdx < snapshots.length - 1 && (
+                    <button 
+                       onClick={(e) => { e.stopPropagation(); setPreviewSnap(snapshots[currentIdx + 1]); }}
+                       className="absolute right-4 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full z-10 transition-colors backdrop-blur-sm shadow-xl"
+                    >
+                      <ChevronRight size={32} />
+                    </button>
+                  )}
+               </div>
+             );
+          })()}
+          
+          {/* Footer Save */}
+          <div className="p-6 pb-8 bg-gradient-to-t from-black/80 to-transparent">
+             <button onClick={async () => {
+                  const imgUrl = previewSnap.file_id ? `https://drive.google.com/thumbnail?id=${previewSnap.file_id}&sz=w1000` : previewSnap.snapshot_url;
+                  try {
+                    const res = await fetch(imgUrl);
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `snapshot_${previewSnap.id}.jpg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    alert("Failed to download image. You can also try long-pressing the image to save.");
+                  }
+             }} className="w-full py-4 bg-white hover:bg-gray-100 transition-colors text-black rounded-2xl font-bold flex items-center justify-center gap-2 uppercase tracking-wide text-sm shadow-xl">
+                 <Download size={20} /> Save to Device
+             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Snapshot Modal */}
+      {snapshotToDelete && (
+        <div className="fixed inset-0 bg-black/60 z-[120] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6">
+              <Trash2 size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Snapshot</h3>
+            <p className="text-gray-500 mb-8">Are you sure you want to delete this snapshot? This action cannot be undone.</p>
+            <div className="flex w-full gap-4">
+              <button
+                disabled={isDeletingSnapshot}
+                onClick={() => setSnapshotToDelete(null)}
+                className="flex-1 py-3.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isDeletingSnapshot}
+                onClick={async () => {
+                  setIsDeletingSnapshot(true);
+                  try {
+                    const res = await fetch(`/api/users/snapshots/${snapshotToDelete.id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                      setSnapshots(prev => prev.filter(s => s.id !== snapshotToDelete.id));
+                      setSnapshotToDelete(null);
+                      setPreviewSnap(null); // Close the preview too
+                    } else {
+                      alert('Failed to delete snapshot.');
+                    }
+                  } catch (e) {
+                    alert('Failed to delete snapshot.');
+                  } finally {
+                    setIsDeletingSnapshot(false);
+                  }
+                }}
+                className="flex-1 py-3.5 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isDeletingSnapshot ? <Loader2 size={18} className="animate-spin" /> : null}
+                {isDeletingSnapshot ? 'Deleting' : 'Delete'}
               </button>
             </div>
           </div>
